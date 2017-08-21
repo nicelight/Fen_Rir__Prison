@@ -20,10 +20,14 @@
 #define CHANGE_CHANNEL 2 // переключение колонок на соседнюю комнату
 
 #define LAMP1 3
-#define LAMP2 6
+#define LAMP2 5
 #define LAMP3 9
 #define LAMP4 10
 #define LAMP5 11
+
+#include <SoftwareSerial.h>
+#include <DFPlayer_Mini_Mp3.h>
+SoftwareSerial mySerial(7, 6); // RX, TX
 
 int inByte = 0;         // incoming serial byte
 int i = 0; // переменная для цикла перебора повторяющихся автоматов.
@@ -69,6 +73,11 @@ unsigned long prevMillisPlay4=0;
 void setup() {
   // put your setup code here, to run once:
 Serial.begin(115200);  
+  mySerial.begin (9600);
+delay(100);
+  mp3_set_serial (mySerial);  //set softwareSerial for DFPlayer-mini mp3 module 
+  mp3_set_volume (15);
+
 pinMode(START, INPUT_PULLUP);
 pinMode(RECHARGE, INPUT_PULLUP);
 pinMode(SIGNAL_FROM_LIB, INPUT_PULLUP);
@@ -81,6 +90,11 @@ digitalWrite(PLAYER_PRISON_PLAY, 0);
 pinMode(PLAYER_PRISON_NEXT, OUTPUT);
 digitalWrite(PLAYER_PRISON_NEXT, 0);
 delay(2000);
+  mp3_play (1);
+  delay (3000);
+  mp3_play (2);
+  delay (3000);
+mp3_stop();
 }// setup
 
 void loop() {
@@ -409,14 +423,14 @@ switch(fakels){// автомат для свечения факелов в тю�
   if (currentMillis - prevMillisfakels>= del_fakels) { 
     prevMillisfakels=prevMslastfakels=currentMillis;
     if((random(1, 100))==1) {// раз в 40 тактов потухнем. 
-      bright_fakel1=random(0, 30); // яркость в ноль
-      bright_fakel2=random(0, 30); // яркость в ноль
-      bright_fakel3=random(0, 30); // яркость в ноль
+      bright_fakel1=random(0, 15); // яркость в ноль
+      bright_fakel2=random(0, 15); // яркость в ноль
+      bright_fakel3=random(0, 15); // яркость в ноль
       del_fakels=random(200, 500); // задержка длинная
     }else{ //остальные такты горим
-      bright_fakel1=random(50, 70); // выбор следующей яркости(random( min до max))
-      bright_fakel2=random(50, 70); // выбор следующей яркости(random( min до max))
-      bright_fakel3=random(50, 70); // выбор следующей яркости(random( min до max))
+      bright_fakel1=random(10, 20); // выбор следующей яркости(random( min до max))
+      bright_fakel2=random(10, 20); // выбор следующей яркости(random( min до max))
+      bright_fakel3=random(10, 20); // выбор следующей яркости(random( min до max))
       del_fakels=random(150, 300); // задержка между переходами яркостей
     }//else
     analogWrite(LAMP3, bright_fakel1);
@@ -456,12 +470,12 @@ switch(lamps){// автомат для свечения лампам в мале
   if (currentMillis - prevMillislamps>= del_lamps) { 
     prevMillislamps=currentMillis;
     if((random(1, 60))==1) {// раз в 40 тактов мигнем
-      bright_lamp1=random(0, 50); // яркость в максимум
-      bright_lamp2=random(0, 50); // яркость в максимум
+      bright_lamp1=random(0, 20); // яркость в максимум
+      bright_lamp2=random(0, 20); // яркость в максимум
       del_lamps=random(300, 500); // задержка длинная
     }else{    //остальные такты горим
-      bright_lamp1=random(25, 35); // выбор следующей яркости(random( min до max))
-      bright_lamp2=random(25, 35); // выбор следующей яркости(random( min до max))
+      bright_lamp1=random(1, 2); // выбор следующей яркости(random( min до max))
+      bright_lamp2=random(1, 2); // выбор следующей яркости(random( min до max))
       del_lamps=random(150, 300); // задержка между переходами яркостей
     }//else
     analogWrite(LAMP1, bright_lamp1);
