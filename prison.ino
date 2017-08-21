@@ -3,8 +3,6 @@
 //по сработке концевика каналы усилка перебрасываются на библиотеку,
 // плеер 1 - некст трек.
 //по приходу сигнала с библиотеки, каналы усилка перебрасываются на тюрьму,
-// включается некст трек и пауза(player_next=30)
-// ярче включить свет ламп3
 // перезарядка, включение плеера на 5 секунд, некст трек, некст трек и пауза, релюшка на каналы тюрьмы
 #define A7 =S_G_O_R_E_L!!!!!! // не подключать аналоговые пины как входы, горят ((
 #define A6 =SGOREL!!!!!!
@@ -15,8 +13,6 @@
                           // пора бы переключить фон с тюрьмы на библиотеку 
 #define KONCEVIK A4 // концевик с двери для переключения плееров
 
-#define PLAYER_PRISON_PLAY 8  // для плеера 1
-#define PLAYER_PRISON_NEXT 7
 #define CHANGE_CHANNEL 2 // переключение колонок на соседнюю комнату
 
 #define LAMP1 3
@@ -54,20 +50,6 @@ unsigned long prevMillislamps=0; // счетчик милисекундный д
 unsigned long prevMillisfakels=0; // счетчик милисекундный для проверки не прошло ли еще время задержки
 unsigned long prevMslastfakels=0; // счетчик милисекундный для проверки не прошло ли еще время задержки
 
-// переменные под плеера
-byte player1_pause=0; // автомат плеера 1 PAUSE (тюрьма фон)
-unsigned long del_play1=500; // задержка для нажатия кнопки плеера 
-unsigned long prevMillisPlay1=0; // счетчик милисекундный для задержки нажатия на кнопку плеера 
-byte player1_next=80;// автомат плеера 1 NEXT
-unsigned long del_play2=500;
-unsigned long prevMillisPlay2=0;
-
-byte player2_pause=80; // автомат плеера 2 PAUSE ( библиотека фон) 
-unsigned long del_play3=500;
-unsigned long prevMillisPlay3=0;
-byte player2_next=80; 
-unsigned long del_play4=500;
-unsigned long prevMillisPlay4=0;
 
 
 void setup() {
@@ -76,8 +58,8 @@ Serial.begin(115200);
   mySerial.begin (9600);
 delay(100);
   mp3_set_serial (mySerial);  //set softwareSerial for DFPlayer-mini mp3 module 
-  mp3_set_volume (15);
-
+  mp3_set_volume (25);
+  mp3_stop();
 pinMode(START, INPUT_PULLUP);
 pinMode(RECHARGE, INPUT_PULLUP);
 pinMode(SIGNAL_FROM_LIB, INPUT_PULLUP);
@@ -85,16 +67,7 @@ pinMode(KONCEVIK, INPUT_PULLUP);
 
 pinMode(CHANGE_CHANNEL, OUTPUT); 
 digitalWrite(CHANGE_CHANNEL, 1); 
-pinMode(PLAYER_PRISON_PLAY, OUTPUT);
-digitalWrite(PLAYER_PRISON_PLAY, 0);
-pinMode(PLAYER_PRISON_NEXT, OUTPUT);
-digitalWrite(PLAYER_PRISON_NEXT, 0);
-delay(2000);
-  mp3_play (1);
-  delay (3000);
-  mp3_play (2);
-  delay (3000);
-mp3_stop();
+
 }// setup
 
 void loop() {
@@ -107,15 +80,15 @@ void loop() {
     inByte = Serial.read();
     if ((inByte-48)==1) { // парсинг цифры 1 ( по таблице ASCI )
       Serial.println("Fon paused");
-       player1_pause=0;     
+
     }//if 1
     if ((inByte-48)==2) { // парсинг цифры 2 ( по таблице ASCI )
       Serial.println("Fon NEXT");
-     player1_next=0;
+      
     }//if 
     if ((inByte-48)==3) { // парсинг цифры 3 ( по таблице ASCI )
       Serial.println("Fon NEXT and PAUSED.   Complex!");
-     player1_next=30;
+     
     }//if 
     if ((inByte-48)==4) { // парсинг цифры 3 ( по таблице ASCI )
       Serial.println("Speakers for prison");
@@ -132,11 +105,9 @@ void loop() {
 // если после нажатия перезарядки играет не фоновая музыка, нажать старт и перезарядка одновременно в течении 4 сек 
 // с момента начала фонового звука.
 // если игра не презаряжается, кнопка старт не удерживается, плеера не отрабатывают, можно дать команду на перезарядку
-if(!digitalRead(RECHARGE)) Serial.println("!!!!! RecharGE detected!!!! ");
-if(!digitalRead(START)) Serial.println("!!!!!         STarT   detected!!!! ");
 
-if((!digitalRead(RECHARGE))&&(digitalRead(START))&&(auto1<60)&&(player1_next==80)&&(player1_pause==80)){
-  delay(100);
+if((!digitalRead(RECHARGE))&&(auto1<60)){
+  delay(50);
   if(!digitalRead(RECHARGE)){
     Serial.println(" !!!! RECHARGING !!!!");
     auto1=60; // го на перезарядку
@@ -199,7 +170,7 @@ case 4: //ожидание нажатия кнопки СТАРТ
       delay(20);
       if(!digitalRead(START)){
         Serial.println(" !!!!! STARTED !!!! ");
-        player1_pause=0; // запускаем фон 
+        mp3_play(1);
         game_over=0; // игра началась - сброс флага (чтобы ориентироваться, музыка сейчас играет или нет) 
         lamps=1; // свет в рабочий режим
         fakels=1; // факелы в рабочий режим
@@ -220,7 +191,7 @@ if(digitalRead(KONCEVIK)){ // если сработал концевик
       analogWrite(LAMP3,(220-i)); // а факел разгорается
         delay(5);
     }
-    player1_next=0; // включаем следующий трек - фон библиотеки
+    mp3_play(2);
     auto1=10; 
     fakels=10;   // факела на яркий третий факел
       }//if del
@@ -232,7 +203,7 @@ if(!digitalRead(SIGNAL_FROM_LIB)){
   if(!digitalRead(SIGNAL_FROM_LIB)){
     digitalWrite(CHANGE_CHANNEL, 1); // перебрасываем колонки усилителя с библиотеки на тюрьму
     delay(300);
-    player1_next=30; // переключаемся на первый фоновый трек и ставим его на паузу
+    mp3_stop(); // музыка выключается
     game_over=1; // игра закончена
     Serial.println("game over");
     auto1=12; // 
@@ -242,166 +213,50 @@ if(!digitalRead(SIGNAL_FROM_LIB)){
 }//if if from lib
 break;
 
-case 12: // перезарядка через 5 минут.
+case 12: // перезарядка через 5 минут
 prevMillisauto1 = currentMillis;
 break;
 
 
 case 60: // ПЕРЕЗАРЯДКА 
-  if (currentMillis - prevMillisauto1 >= del_auto1) {  // через 5 минут перезарядка 
-     prevMillisauto1 = currentMillis;
-
   lamps=0; // включаем свет на полную
   fakels=0;// включаем факелы на полную
   digitalWrite(CHANGE_CHANNEL, 1); // перебрасываем колонки усилителя с библиотеки на тюрьму
-  if(game_over){ //если игру отиграли - звук на паузе стоит, его надо включить
-    player1_pause=0; // включим плеер, убедимся, что играет тюремный звук
-    del_auto1=7000;
-  }// if game_over
-  else{ // иначе звук и так играет, идем на ожидание перемотки
-    del_auto1=4000;
-  }// else (game_over)
   prevMillisauto1 = currentMillis;
-  auto1=61; // го 
-  }//if ms
-break;
-case 61: // в течении 4(7) секунд, позволяем перемотать трек
-  if((!digitalRead(START))&&(!digitalRead(RECHARGE))){ 
-    delay(20);
-    if((!digitalRead(START))&&(!digitalRead(RECHARGE))){
-      Serial.println("             +===============================================!!!! NEXT TRACK ~~~~~~~~~~~~");
-      player1_next=0;  // если нажать две кнопки сразу, будет некст трек, для синхронизации
-      del_auto1=4000;
-      prevMillisauto1 = currentMillis;
-      auto1=64; // го на установку паузы
-    }
-  }// if if two keys pushed
-  if (currentMillis - prevMillisauto1 >= del_auto1) {  // если в течении 7 секунд перемотка не произошла, 
-                    /// идем в установку плеера с фоном на паузу фон
-     prevMillisauto1 = currentMillis;
-     del_auto1=100;
-     auto1=64; // го на установку паузы
-  }// if ms
-break;
-case 64: // устанавливаем на паузу фон.
-  if (currentMillis - prevMillisauto1 >= del_auto1) { 
-      player1_pause=0; // ставим плеер на паузу на начальном фоновом треке
-      prevMillisauto1 = currentMillis;
-      del_auto1=3000; // пока фон на паузу встанет
-      auto1=65; // го на ожидание установки паузы
-  }// if ms
-break;
-case 65: // ждем пока фон встанет на паузу
-  if (currentMillis - prevMillisauto1 >= del_auto1) { 
-      prevMillisauto1 = currentMillis;
-      del_auto1=100;
-      auto1=1; // го напроверку откидной двери
-  }// if ms
+  del_auto1=100;
+  mp3_stop();
+    analogWrite(LAMP3, 250); // мигаем мол перезаряжены
+    analogWrite(LAMP4, 250);
+    analogWrite(LAMP5, 250);
+    delay(500);
+    analogWrite(LAMP3, 0);
+    analogWrite(LAMP4, 0);
+    analogWrite(LAMP5, 0);
+    delay(200);
+    analogWrite(LAMP3, 250);
+    analogWrite(LAMP4, 250);
+    analogWrite(LAMP5, 250);
+    delay(400);
+    analogWrite(LAMP3, 0);
+    analogWrite(LAMP4, 0);
+    analogWrite(LAMP5, 0);
+    delay(200);
+    analogWrite(LAMP3, 250);
+    analogWrite(LAMP4, 250);
+    analogWrite(LAMP5, 250);
+    delay(200);
+    analogWrite(LAMP3, 0);
+    analogWrite(LAMP4, 0);
+    analogWrite(LAMP5, 0);
+    delay(100);
+    
+  auto1=1; // го напроверку откидной двери
 break;
 
 case 80: // ожидание 
 prevMillisauto1 = currentMillis;
 break;
 }// switch(auto1)
-
-
-///////////////// player 1 ///////////////////// фон ТЮРЬМА /////// 
-switch (player1_pause){ // автомат для работы кнопки плеера "PAUSE/PLAY"
-case 0:
-   del_play1=50; // на пол секунды нажмем кнопку PLAY в кейсе 2 и выключаем
-    prevMillisPlay1 = currentMillis;
-    Serial.println("                              prison (p1)_Play/Pause");
-    player1_pause=1;
-break;
-case 1: // по истечении предыдущего времени ( 2 секунды с сетапа) ПРОИЗВЕДЕМ НАЖАТИЕ на кнопку PLAY на пол секунды 
-  if (currentMillis - prevMillisPlay1 >= del_play1) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay1 = currentMillis; //сброс милисекундного счетчика
-    digitalWrite(PLAYER_PRISON_PLAY, 1); //нажатие на кнопку play 
-    digitalWrite(13, 1);
-    del_play1=800; 
-    player1_pause=2;
-  }
-break;
-case 2: // задержка во время предыдущего действия с кнопкой PLAY 
-  if (currentMillis - prevMillisPlay1 >= del_play1) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay1 = currentMillis; //сброс милисекундного счетчика
-    digitalWrite(PLAYER_PRISON_PLAY, 0); // отпускание нажатия на кнопку PLAY
-    digitalWrite(13, 0);
-    player1_pause=80; // уход в режим ожидания 
-  }
-break;
-
-case 80: // ожидание команды для нажатия на кнопку плеера1
-del_play1=100;
-prevMillisPlay1=currentMillis;
-break;
-}// switch (player1)
-
-switch (player1_next){ // автомат для отработки кнопки плеера "UP"
-case 0:
-   del_play2=20; // на пол секунды нажмем кнопку PLAY в кейсе 2 и выключаем
-    prevMillisPlay2 = currentMillis;
-    Serial.println("                              pprison (p1)_NEXT_track");
-    player1_next=1;
-break;
-  
-case 1: // по истечении предыдущего времени ( 2 секунды с сетапа) ПРОИЗВЕДЕМ НАЖАТИЕ на кнопку PLAY на пол секунды 
-  if (currentMillis - prevMillisPlay2 >= del_play2) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay2 = currentMillis; //сброс милисекундного счетчика
-    del_play2=200; // на пол секунды нажмем кнопку PLAY в кейсе 2 и выключаем
-    digitalWrite(PLAYER_PRISON_NEXT,1); //нажатие на кнопку play
-    digitalWrite(13, 1);
-    player1_next=2;
-  }
-break;
-case 2: // задержка во время предыдущего действия с кнопкой PLAY 
-  if (currentMillis - prevMillisPlay2 >= del_play2) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay2 = currentMillis; //сброс милисекундного счетчика
-    digitalWrite(PLAYER_PRISON_NEXT, 0); // отпускание нажатия на кнопку PLAY
-    digitalWrite(13, 0);
-  
-    player1_next=80; // уход в режим ожидания 
-  }
-break;
-
-// комплексная перемотка и ПАУЗА для волка 
-case 30:
-   del_play2=50; 
-    prevMillisPlay2 = currentMillis;
-    Serial.println("                              PRISON Next_track and paused. Complex!");
-    player1_next=31;
-break;
-  
-case 31: // жмем некс трек волка ( плеер 1)
-  if (currentMillis - prevMillisPlay2 >= del_play2) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay2 = currentMillis; //сброс милисекундного счетчика
-    del_play2=300; // на пол секунды нажмем кнопку PLAY в кейсе 2 и выключаем
-    digitalWrite(PLAYER_PRISON_NEXT,1); //нажатие на кнопку play
-    digitalWrite(13, 1);
-    player1_next=32;
-  }
-break;
-case 32: // отпускаем кнопку
-  if (currentMillis - prevMillisPlay2 >= del_play2) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay2 = currentMillis; //сброс милисекундного счетчика
-    digitalWrite(PLAYER_PRISON_NEXT, 0); // отпускание нажатия на кнопку PLAY
-    digitalWrite(13, 0);  
-    player1_next=33; // ожидаем немного до запуска паузы
-    del_play2=1500;
-  }
-break;
-case 33: // запускаем PLAY плеера 1 ( волк)
-  if (currentMillis - prevMillisPlay2 >= del_play2) { // если уже прошло время del_lamp1 ( задержка между возростаниями9убываниями) яркости на еденичку во время процесса вздоха
-    prevMillisPlay2 = currentMillis; //сброс милисекундного счетчика
-    player1_pause=0; // PLAY/PAUSE плеера 1 запускаем 
-    player1_next=80; // уход в режим ожидания 
-  }
-break;
-case 80: // ожидание команды для нажатия на кнопку плеера1
-del_play2=100;
-prevMillisPlay2=currentMillis;
-break;
-}// switch (player1_next)
 
 
 ///////////////////////////////////////////////////
